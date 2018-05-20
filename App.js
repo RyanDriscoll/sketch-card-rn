@@ -9,15 +9,19 @@ import {
   View
 } from "react-native";
 
+console.ignoredYellowBox = ['Remote debugger is in a background'];
+
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
-const offset = new Animated.Value(0);
+// const offset = new Animated.Value(0);
 
 class Inning extends Component {
 
   componentWillReceiveProps(nextProps) {
-
+    if (this.props.yOffset !== nextProps.yOffset) {
+      this.el.scrollTo({ y: nextProps.yOffset })
+    }
   }
 
   renderAtBats() {
@@ -29,11 +33,18 @@ class Inning extends Component {
     }
     return atBats;
   }
+
+  handleScroll(e) {
+    this.props.setOffsetY(e.nativeEvent.contentOffset.y)
+  }
+
   render() {
     return (
       <ScrollView
-        onScroll={event => console.log('VERTICAL EVENT', event.nativeEvent)}
-        scrollEventThrottle={16}
+        ref={el => { this.el = el }}
+        onMomentumScrollEnd={event => this.handleScroll(event)}
+        onScrollEndDrag={event => this.handleScroll(event)}
+        scrollEventThrottle={160}
         horizontal={false}
         pagingEnabled
         style={styles.scrollView}
@@ -103,18 +114,16 @@ export default class App extends Component {
     super(props);
     this.state = {
       inningCount: 9,
-      xOffset: 0
+      yOffset: 0,
     }
-
-    this.scrollToX = this.scrollToX.bind(this);
+    this.setOffsetY = this.setOffsetY.bind(this);
   }
 
-  scrollToX(e) {
-    console.log('X EVENT', e.nativeEvent);
-    this.setState({ xOffset: e.nativeEvent.contentOffset.x })
+  setOffsetY(yOffset) {
+    if (yOffset % SCREEN_HEIGHT === 0) {
+      this.setState({ yOffset })
+    }
   }
-
-
 
   renderInnings() {
     const innings = [];
@@ -123,7 +132,8 @@ export default class App extends Component {
         <Inning
           key={i}
           inning={i + 1}
-          xOffset={this.state.xOffset}
+          yOffset={this.state.yOffset}
+          setOffsetY={this.setOffsetY}
         />
       )
     }
@@ -133,11 +143,7 @@ export default class App extends Component {
   render() {
     return (
       <ScrollView
-        onScroll={event => this.scrollToX(event)}
-        scrollEventThrottle={16}
         horizontal
-        // vertical
-
         pagingEnabled
         style={styles.scrollView}
       >
@@ -151,16 +157,13 @@ export default class App extends Component {
 
 const styles = StyleSheet.create({
   scrollView: {
-    // flexDirection: "row",
     backgroundColor: "#00d4ff"
   },
   scrollPage: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-    // padding: 50
   },
   screen: {
-    // height: '80%',
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
